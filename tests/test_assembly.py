@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def S(a,b,c):
     """
     Compute the triple integral  
@@ -16,6 +15,12 @@ def S(a,b,c):
     
         numpy array
     """
+    # 
+    # Trivial case
+    #
+    tol = 1e-12
+    
+    
     nrm = np.sqrt(a**2 + b**2 + c**2)
     I11 = - a/2.*np.arctan(b*c/(a*nrm))\
           + 0.5*a*c*np.log((nrm + b)/np.sqrt(a**2 + c**2)) + \
@@ -72,7 +77,83 @@ def Ir(box, level, ub):
         return val
 
 
+dim = 3
+L = 10
+level = 4
+k_max = np.int(2**level)
+K = np.empty((k_max**3,3))
+for (k,j) in zip(np.mgrid[0:k_max, 0:k_max, 0:k_max], range(dim)):
+    K[:,j] = k.ravel() 
+    
+lb = 2*L*2**(-level)*(K-2**(level-1))
+ub = 2*L*2**(-level)*(1+K-2**(level-1))
 
+cells = np.transpose(np.array([lb,ub]),[1,2,0])
+
+print(lb.min())
+print(ub.max())
+
+print(cells.shape)
 
 box = np.array([[-2,1], [-1,1], [-4,-2]])
 print(I(box))
+
+
+#
+# Tensor product quadrature rule on reference cell [-1,1]^3
+# 
+n_gauss = 7
+xg_1d,wg_1d = np.polynomial.legendre.leggauss(n_gauss)
+xg_3d = np.empty((n_gauss**dim, dim))
+wg_3d = np.ones(n_gauss**dim)
+for k,j in zip(np.mgrid[0:n_gauss, 0:n_gauss, 0:n_gauss], range(dim)):
+    xg_3d[:,j] = xg_1d[k.ravel()]
+    wg_3d *= wg_1d[k.ravel()]
+
+#
+# Transform quadrature rule box
+# 
+n_cells = cells.shape[0]
+for ic in range(n_cells):
+    yg_3d = np.empty((n_gauss**dim, dim))
+    vg_3d = np.ones(n_gauss**dim)
+    for id in range(dim):
+        y_min = cells[ic,id,0]
+        y_max = cells[ic,id,1]
+        yg_3d[:,id] = y_min + 0.5*(y_max-y_min)*(xg_3d[:,id]+1)
+        vg_3d *= 0.5*(y_max-y_min)
+    
+    # Check quadrature rule on cell
+    if ic==20:
+        y_min = cells[ic,:,0]
+        y_max = cells[ic,:,1]
+        #print([(y1,y2) for y1,y2 in zip(y_min, y_max)])
+        for id in range(dim):
+            #print(yg_3d[:,id].min())
+            #print(y_min[id])
+            assert np.all(yg_3d[:,id] >= y_min[id]), 'Ohoh'
+            assert np.all(yg_3d[:,id] <= y_max[id]), 'ohoh'
+            #print(yg_3d.shape) 
+        #print(yg_3d.shape)
+        #print(vg_3d.shape)
+   
+
+"""
+Assembly of the matrix (ij|kl)
+
+Must compute I_{C1} I_{C2} |r-s|^{-1} dr ds for all C1, C2 in cells
+
+NOTE: Integral depends only on the relative position of cells. The system
+Matrix is therefore Toeplitz (we can represent it by means of one row
+
+quadrule on reference cell
+for c1 in [C1]:
+    quadrule on c1
+    for each si in quadrule:
+        compute I_{C2} |r-si|^{-1} dr for all C2 in cells:
+            transform C2 to C2-si
+            split into linear comb of integrals from 0,0,0 to a,b,c (>0)
+    compute weighted sum
+    insert into row of matrix (full)
+"""
+        
