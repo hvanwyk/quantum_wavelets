@@ -80,7 +80,7 @@ def Ir(box, level, ub):
 dim = 3
 L = 10
 level = 4
-k_max = np.int(2**level)
+k_max = 2**level
 K = np.empty((k_max**3,3))
 for (k,j) in zip(np.mgrid[0:k_max, 0:k_max, 0:k_max], range(dim)):
     K[:,j] = k.ravel() 
@@ -90,12 +90,14 @@ ub = 2*L*2**(-level)*(1+K-2**(level-1))
 
 cells = np.transpose(np.array([lb,ub]),[1,2,0])
 
+print(cells[0,:,:])
 print(lb.min())
+print(ub.min())
 print(ub.max())
 
 print(cells.shape)
 
-box = np.array([[-2,1], [-1,1], [-4,-2]])
+box = np.array([[-2,1], [-1,1], [4,6]])
 print(I(box))
 
 
@@ -125,6 +127,7 @@ for ic in range(n_cells):
     
     # Check quadrature rule on cell
     if ic==20:
+        print(cells[ic,:,:])
         y_min = cells[ic,:,0]
         y_max = cells[ic,:,1]
         #print([(y1,y2) for y1,y2 in zip(y_min, y_max)])
@@ -147,13 +150,12 @@ NOTE: Integral depends only on the relative position of cells. The system
 Matrix is therefore Toeplitz (we can represent it by means of one row
 
 quadrule on reference cell
-for c1 in [C1]:
-    quadrule on c1
-    for each si in quadrule:
-        compute I_{C2} |r-si|^{-1} dr for all C2 in cells:
-            transform C2 to C2-si
-            split into linear comb of integrals from 0,0,0 to a,b,c (>0)
-    compute weighted sum
-    insert into row of matrix (full)
+quadrule on c1
+for each si in quadrule:
+    compute I_{C2} |r-si|^{-1} dr for all C2 in cells:
+        transform C2 to C2-si
+        split into linear comb of integrals from 0,0,0 to a,b,c (>0)
+compute weighted sum
+
 """
         
